@@ -41,11 +41,17 @@ int main (int argc, char **argv) {
     
     /*Connect to Server*/
     int con = connect(sockfd, (struct sockaddr*)&dest, sizeof(dest));
-    if (con != 0) {
+    
+    /*If first connection attempt failed, wait 3 seconds and try again*/
+    while (con != 0) {
+        sleep(3);
+        con = connect(sockfd, (struct sockaddr*)&dest, sizeof(dest));
+    }
+    /*if (con != 0) {
         perror("Connect");
         exit(errno);
-    }
-    
+    }*/
+    printf("Successfully connected to server! Accepting commands now.\n");
     int comp = -1;
     int length = 0;
     
@@ -53,12 +59,13 @@ int main (int argc, char **argv) {
     while (1) {
         bzero(buffer, MAXBUF);        
         if (fgets(buffer, MAXBUF, stdin) == NULL) break;
-        comp = strcmp("EXIT\n", buffer);
+        comp = strcmp("exit\n", buffer);
         length = strlen(buffer);
         send(sockfd, buffer, length, 0); 
         if (comp == 0) {
             break;
         }
+        sleep(2);                                               //slows down process to simulate a server handling thousands of requests
         
     }
        

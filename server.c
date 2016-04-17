@@ -13,6 +13,25 @@
 
 #define PORT 8888
 #define MAXBUF 1024
+pthread_t *tid;
+int terminate = 0;
+
+void * timer() {
+    
+    sleep(5000);
+    terminate = 1;
+    terminateThreads(tid);
+    
+}
+
+void terminateThreads(pthread_t *threads) {
+    
+    int i = 0;
+    for (i = 0; i < 20; i++) {
+        pthread_cancel(threads[i]);
+    }
+    
+}
 
 void * get_result(int clientfd) {
     
@@ -24,27 +43,23 @@ void * get_result(int clientfd) {
     compare = strcmp("EXIT\n", buffer);
         
     //As long as user doesn't exit, continue to received messages from user
-    while (compare != 0) {
+    while (compare != 0 && n != 0) {
         printf("Message received: %s\n", buffer);
         bzero(buffer, MAXBUF);
         n = read(clientfd, buffer, 255);
-        compare = strcmp("EXIT\n", buffer);
+        compare = strcmp("exit\n", buffer);
+
     }
+    
+    //Close socket with client and display status update
+    printf("Connection with %d terminated.\n", clientfd);
+    close(clientfd);
 }
 
 int main(int argc, char **argv) {
     
     int sockfd;
     struct sockaddr_in self;
-    
-    /*
-    portno = atoi(argv[1])
-    
-    //zero out the socket address info struct
-    bzero((char*)&serverAddressInfo, sizeof(serverAddressInfo))
-    
-    //set
-    */
     
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &(int){ 1 }, sizeof(int));
@@ -73,34 +88,21 @@ int main(int argc, char **argv) {
     
     int clientfd;
     int id = 0;
-    pthread_t *tid = malloc(20 * sizeof(pthread_t));
+    tid = malloc(20 * sizeof(pthread_t));
+    pthread_t *timeThread;
     
-    while (1) {
+    //Start the server
+    while (!terminate) {
         
-                
+        pthread_create(&timeThread, NULL, timer, NULL);        
         struct sockaddr_in client_addr;
         int addrlen = sizeof(client_addr);
         printf("Listening...\n");
         
-        /*accept a connection*/
+        /*accept a connection and spawn a new thread*/
         clientfd = accept(sockfd, (struct sockaddr*)&client_addr, &addrlen);
 		printf("%s:%d connected\n", inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port));        
         pthread_create(&tid[id], NULL, get_result, clientfd);
-        
-        /*Accept commands from client, and print to console*/
-        
-        
-        /*int n = read(clientfd, buffer, 255);
-        compare = strcmp("EXIT\n", buffer);*/
-        
-        //As long as user doesn't exit, continue to received messages from user
-        /*while (compare != 0) {
-            printf("Message received: %s\n", buffer);
-            bzero(buffer, MAXBUF);
-            n = read(clientfd, buffer, 255);
-            compare = strcmp("EXIT\n", buffer);
-        }*/
-        //break;
         
     }
     
