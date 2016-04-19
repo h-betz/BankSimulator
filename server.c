@@ -10,12 +10,19 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <time.h>
+#include "bank.h"
 
 #define PORT 8888
 #define MAXBUF 1024
-pthread_t *tid;
-int terminate = 0;
 
+//Global variables for threads, accounts, and server control
+pthread_t *tid;
+Account accounts[20];
+int terminate = 0;
+int sockfd;
+
+
+//Keeps our server running for 5000 seconds before shutting down
 void * timer() {
     
     sleep(5000);
@@ -24,6 +31,7 @@ void * timer() {
     
 }
 
+//Ends all connections and threads in our server
 void terminateThreads(pthread_t *threads) {
     
     int i = 0;
@@ -33,6 +41,16 @@ void terminateThreads(pthread_t *threads) {
     
 }
 
+//Simulates a server backup that occurs every 20 seconds
+void serverControl() {
+    
+    while (1) {
+        sleep(20);
+    }
+    
+}
+
+//Generic function to handle client-server interaction
 void * get_result(int clientfd) {
     
     int compare = -1;    
@@ -44,7 +62,7 @@ void * get_result(int clientfd) {
         
     //As long as user doesn't exit, continue to received messages from user
     while (compare != 0 && n != 0) {
-        printf("Message received: %s\n", buffer);
+        readCommands(buffer);
         bzero(buffer, MAXBUF);
         n = read(clientfd, buffer, 255);
         compare = strcmp("exit\n", buffer);
@@ -58,7 +76,6 @@ void * get_result(int clientfd) {
 
 int main(int argc, char **argv) {
     
-    int sockfd;
     struct sockaddr_in self;
     
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -89,11 +106,13 @@ int main(int argc, char **argv) {
     int clientfd;
     int id = 0;
     tid = malloc(20 * sizeof(pthread_t));
-    pthread_t *timeThread;
+    pthread_t *timeThread;                                                      //our thread that will control how long our server is online
+    pthread_t *control;                                                         //our thread that will handle requests from server manager
     
     //Start the server
     while (!terminate) {
         
+        pthread_create(&control, NULL, serverControl, NULL);
         pthread_create(&timeThread, NULL, timer, NULL);        
         struct sockaddr_in client_addr;
         int addrlen = sizeof(client_addr);

@@ -15,11 +15,39 @@
 #define PORT_FTP 8888
 #define SERVER_ADDR "127.0.0.1"
 
+void * handleServer() {
+    
+    
+    
+}
+
+void * handleCommand(int sockfd) {
+    
+    char buffer[MAXBUF];
+    int comp = -1;
+    int length = 0;
+    
+    //Get user input and send it to server
+    while (1) {
+        bzero(buffer, MAXBUF);        
+        if (fgets(buffer, MAXBUF, stdin) == NULL) break;
+        comp = strcmp("exit\n", buffer);
+        length = strlen(buffer);
+        send(sockfd, buffer, length, 0); 
+        if (comp == 0) {
+            break;
+        }
+        sleep(2);                                               //slows down process to simulate a server handling thousands of requests
+        
+    }
+    
+}
+
 int main (int argc, char **argv) {
     
     int sockfd = 0;
     struct sockaddr_in dest;
-    char buffer[MAXBUF];
+    
     
     /*Open socket for streaming*/
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
@@ -47,28 +75,19 @@ int main (int argc, char **argv) {
         sleep(3);
         con = connect(sockfd, (struct sockaddr*)&dest, sizeof(dest));
     }
-    /*if (con != 0) {
-        perror("Connect");
-        exit(errno);
-    }*/
+
     printf("Successfully connected to server! Accepting commands now.\n");
-    int comp = -1;
-    int length = 0;
     
-    //Get user input and send it to server
-    while (1) {
-        bzero(buffer, MAXBUF);        
-        if (fgets(buffer, MAXBUF, stdin) == NULL) break;
-        comp = strcmp("exit\n", buffer);
-        length = strlen(buffer);
-        send(sockfd, buffer, length, 0); 
-        if (comp == 0) {
-            break;
-        }
-        sleep(2);                                               //slows down process to simulate a server handling thousands of requests
-        
-    }
-       
+    /*Create threads to handle user input and server response*/
+    pthread_t commandInput;
+    pthread_t output;
+    pthread_create(&commandInput, NULL, handleCommand, sockfd);
+    pthread_create(&output, NULL, handleServer, NULL);
+    
+    
+    //Wait for threads to finish
+    pthread_join(commandInput, NULL);
+    pthread_cancel(output);  
     
     close(sockfd);
     
