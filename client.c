@@ -15,7 +15,7 @@
 #define PORT_FTP 8888
 #define SERVER_ADDR "127.0.0.1"
 
-char * readAccountName(char *str, int i) {
+/*char * readAccountName(char *str, int i) {
     
     char *acct_name = (char *)malloc(strlen(str) + 1);
     bzero(acct_name, strlen(str) + 1);
@@ -122,7 +122,7 @@ void tokenize(char *str) {
         if (c == ' ') {
             result = checkCommand(token, str, ++i);
             free(token);
-            /*switch(result) {
+            switch(result) {
                 case 0:
                     //read account name
                     break;
@@ -137,7 +137,7 @@ void tokenize(char *str) {
                     break;
                 default:
                 
-            }*/
+            }
             //switch case to handle command
         } else if (c == '\0') {
             if (strcmp("balance", token)) {
@@ -151,7 +151,7 @@ void tokenize(char *str) {
         
     }
     
-}
+}*/
 
 void * handleServer() {
     

@@ -3,7 +3,7 @@
 
 typedef struct Acount_ {
     
-    char *name;
+    char name[100];
     float balance;
     int in_session;
 

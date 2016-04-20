@@ -11,6 +11,7 @@
 #include <sys/types.h>
 #include <time.h>
 #include "bank.h"
+#include "clientHandle.h"
 
 #define PORT 8888
 #define MAXBUF 1024
@@ -56,16 +57,18 @@ void * get_result(int clientfd) {
     int compare = -1;    
     char buffer[MAXBUF];
     bzero(buffer, MAXBUF);
-    
+    char *x;
     int n = read(clientfd, buffer, 255);
-    compare = strcmp("EXIT\n", buffer);
+    compare = strcmp("exit\n", buffer);
         
     //As long as user doesn't exit, continue to received messages from user
     while (compare != 0 && n != 0) {
-        readCommands(buffer);
+        x = tokenize(buffer);
+        printf("%s\n", x);
         bzero(buffer, MAXBUF);
         n = read(clientfd, buffer, 255);
         compare = strcmp("exit\n", buffer);
+        free(x);        
 
     }
     
