@@ -35,7 +35,7 @@ char * readAccountName(char *str, int i) {
     return 0;
 }
 
-char * readCreditDebit(char *str, int i) {
+float readCreditDebit(char *str, int i) {
     
     char *amount = (char *) malloc(strlen(str) + 1);
     bzero(amount, strlen(str) + 1);
@@ -59,8 +59,10 @@ char * readCreditDebit(char *str, int i) {
                 ind++;
                 c = str[++i];
             }
-            if (c == '\0') {
-                return amount;
+            if (c == '\0' || isspace(c)) {
+                float f = atof(amount);
+                free(amount);
+                return f;
             } else {
                 return 0;
             }
@@ -81,38 +83,64 @@ char * readCreditDebit(char *str, int i) {
             c = str[++i];
         }
         if (c == '\0') {
-            return amount;
+            float f = atof(amount);
+            free(amount);
+            return f;
         }
     }
     
     return 0;
 }
 
+int check(char *string) {
+    
+    char *result = tokenize(string);
+    if (strcmp(result, "open") == 0) {
+        //Command is open
+        free(result);
+        return 1;
+    } else if (strcmp(result, "start") == 0) {
+        //Command is start
+        free(result);        
+        return 2;
+    } else if (strcmp(result, "debit") == 0) {
+        //Command is debit
+        free(result);       
+        return 3;
+    } else if (strcmp(result, "credit") == 0) {
+        //Command is credit
+        free(result);
+        return 4;
+    }
+    
+    return 0;
+}
 
 
+/*
 char * checkCommand(char *token, char *str, int i) {
 
     if (strcmp(token, "open") == 0) {
         //Command is open
         char *acct_name = readAccountName(str, i);
-        printf("open %s\n", acct_name);
         return acct_name;
-    } else if (strcmp(token, "start")) {
+    } else if (strcmp(token, "start") == 0) {
         //Command is start
         char *acct_name = readAccountName(str, i);        
         return acct_name;
-    } else if (strcmp(token, "debit")) {
+    } else if (strcmp(token, "debit") == 0) {
         //Command is debit
         char *debit = readCreditDebit(str, i);
+        //printf("here %s\n", debit);        
         return debit;
-    } else if (strcmp(token, "credit")) {
+    } else if (strcmp(token, "credit") == 0) {
         //Command is credit
         char *credit = readCreditDebit(str, i);
         return credit;
     }
 
     return 0;
-}
+}*/
 
 //Parses user input to read commands
 char * tokenize(char *str) {
@@ -132,10 +160,10 @@ char * tokenize(char *str) {
         }
         //If next character is a space, marks end of command (eg. debit, open, credit)
         if (c == ' ') {
-            char *result = checkCommand(token, str, ++i);
-            free(token);
-            printf("%p\n", result);
-            return result;
+            //char *result = checkCommand(token, str, ++i);
+            //free(token);
+            //return result;
+            return token;
             //switch case to handle command
         } else if (c == '\0') {
             if (strcmp("balance", token)) {
@@ -151,9 +179,4 @@ char * tokenize(char *str) {
     
     return 0;
     
-}
-
-char * readCommands(char *str) {
-    char *command = tokenize(str);
-    return command;
 }

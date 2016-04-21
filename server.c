@@ -57,18 +57,36 @@ void * get_result(int clientfd) {
     int compare = -1;    
     char buffer[MAXBUF];
     bzero(buffer, MAXBUF);
-    char *x;
+    char *result;
+    float amount = 0;
+    int flag = -1;
     int n = read(clientfd, buffer, 255);
     compare = strcmp("exit\n", buffer);
         
     //As long as user doesn't exit, continue to received messages from user
     while (compare != 0 && n != 0) {
-        x = tokenize(buffer);
-        printf("%s\n", x);
+        flag = check(buffer);
+        switch (flag) {
+            case 1:
+                result = readAccountName(buffer, strlen("open "));
+                free(result);        
+                break;
+            case 2:
+                result = readAccountName(buffer, strlen("start "));
+                free(result);
+                break;
+            case 3:
+                amount = readCreditDebit(buffer, strlen("debit "));
+                break;
+            case 4:
+                amount = readCreditDebit(buffer, strlen("credit "));
+                break;
+        }
+        /*result = tokenize(buffer);
+        printf("%s\n", result);*/
         bzero(buffer, MAXBUF);
         n = read(clientfd, buffer, 255);
         compare = strcmp("exit\n", buffer);
-        free(x);        
 
     }
     
@@ -76,6 +94,7 @@ void * get_result(int clientfd) {
     printf("Connection with %d terminated.\n", clientfd);
     close(clientfd);
 }
+
 
 int main(int argc, char **argv) {
     
