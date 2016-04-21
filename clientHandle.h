@@ -7,8 +7,6 @@ char * readAccountName(char *str, int i);
 
 float readCreditDebit(char *str, int i);
 
-//char * checkCommand(char *token, char *str, int i);
-
 int check(char *string);
 
 #endif

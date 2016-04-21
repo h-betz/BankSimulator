@@ -10,17 +10,30 @@
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <time.h>
+#include <signal.h>
 #include "bank.h"
 #include "clientHandle.h"
 
 #define PORT 8888
-#define MAXBUF 1024
+#define MAXBUF 256
 
 //Global variables for threads, accounts, and server control
 pthread_t *tid;
-Account accounts[20];
+Account *accounts[20];
 int terminate = 0;
 int sockfd;
+
+//Handles system signlas such as ^C and shutsdown the server in a graceful, controlled manner
+void intHandler(int sig) {
+    
+    terminate = 1;
+    bernieSanders();
+    terminateThreads();
+    free(tid);
+    close(sockfd);
+    printf("Terminated\n");
+    exit(errno);
+}
 
 
 //Keeps our server running for 5000 seconds before shutting down
@@ -28,16 +41,18 @@ void * timer() {
     
     sleep(5000);
     terminate = 1;
-    terminateThreads(tid);
+    terminateThreads();
     
 }
 
 //Ends all connections and threads in our server
-void terminateThreads(pthread_t *threads) {
+void terminateThreads() {
     
     int i = 0;
     for (i = 0; i < 20; i++) {
-        pthread_cancel(threads[i]);
+        if (tid[i] != NULL) {
+            pthread_cancel(tid[i]);
+        }
     }
     
 }
@@ -51,17 +66,105 @@ void serverControl() {
     
 }
 
+//Closes all accounts in our bank
+void bernieSanders() {
+    
+    int i = 0;
+    Account *acct = accounts[i];
+    while (acct != NULL) {
+        printf("Breaking up the big banks!\n");
+        free(acct);
+        ++i;
+        acct = accounts[i];
+    }
+    
+}
+
+//Adds the account with name acct to our list of accounts 
+void addAccount(Account *acct) {
+    
+    int i = 0;
+    
+    //Loops through our list of accounts to see if there is an opening or if 
+    //an account with the same name already exists
+    for (i = 0; i < 20; i++) {
+        if (accounts[i] == NULL) {
+            accounts[i] = acct;
+            return;
+        }
+        if (strcmp(accounts[i]->name, acct->name) == 0) {
+            printf("An account with this name already exists!\n");
+            return;
+        }
+    }
+    
+}
+
+Account * getAccount(char *name) {
+    
+    int i = 0;
+    
+    for (i = 0; i < 20; i++) {
+        //Check if this is our account
+        if (strcmp(accounts[i]->name, name) == 0) {
+            return accounts[i];
+        }
+    }
+    
+    return NULL;
+    
+}
+
+//Handles a customer session
+void customerSession(Account *acct, int clientfd) {
+    
+    int compare = -1;                               //compare integer to check when user says finish
+    char buffer[MAXBUF];                            //char array to store user command
+    bzero(buffer, MAXBUF);                          //Zero out char array
+    int flag = -1;                                  //Flag to store result of command
+    float amount = 0;                               //Floating value to store value to debit, credit or balance
+    int n = read(clientfd, buffer, 255);            //Read commands from client
+    
+    compare = strcmp("finish\n", buffer);           //Customer ended this session
+    
+    while (compare != 0 && n != 0) {
+        printf("Customer session\n");
+        flag = check(buffer);
+        switch (flag) {
+            case 3:
+                amount = readCreditDebit(buffer, strlen("debit "));
+                break;
+            case 4:
+                amount = readCreditDebit(buffer, strlen("credit "));
+                break;
+            case 5:
+                //finish account session
+                compare = 1;
+                break;
+            case 6:
+                //get balance
+                break; 
+        }
+        
+        bzero(buffer, MAXBUF);
+        n = read(clientfd, buffer, 255);
+        
+    }
+    
+}
+
 //Generic function to handle client-server interaction
 void * get_result(int clientfd) {
     
-    int compare = -1;    
-    char buffer[MAXBUF];
-    bzero(buffer, MAXBUF);
-    char *result;
-    float amount = 0;
-    int flag = -1;
-    int n = read(clientfd, buffer, 255);
-    compare = strcmp("exit\n", buffer);
+    int compare = -1;                           //Compare value to compare commands with exit strin
+    char buffer[MAXBUF];                        //Buffer array to store client input
+    bzero(buffer, MAXBUF);                      //Zeros out our buffer stream
+    char *result;                               //String to hold account name
+    float amount = 0;                           //Floating value to store credit, debit, and balance values
+    int flag = -1;                              //integer value to tell our switch case to perform which command
+    Account *acct = NULL;                       //Account struct that will be used when opening or starting accounts
+    int n = read(clientfd, buffer, 255);        //Integer to handle read result 
+    compare = strcmp("exit\n", buffer);         //Checks to see if we were told to exit
         
     //As long as user doesn't exit, continue to received messages from user
     while (compare != 0 && n != 0) {
@@ -69,21 +172,25 @@ void * get_result(int clientfd) {
         switch (flag) {
             case 1:
                 result = readAccountName(buffer, strlen("open "));
-                free(result);        
+                acct = createAccount(result);
+                free(result);
+                if (acct != NULL) {
+                    printf("Created account! %s\n", acct->name);
+                    addAccount(acct);
+                }       
                 break;
             case 2:
                 result = readAccountName(buffer, strlen("start "));
+                acct = getAccount(result);
+                printf("Obtained account: %s\n", acct->name);
                 free(result);
+                customerSession(acct, clientfd);
                 break;
-            case 3:
-                amount = readCreditDebit(buffer, strlen("debit "));
-                break;
-            case 4:
-                amount = readCreditDebit(buffer, strlen("credit "));
+            default:
+                printf("Error! Improper command!\n");
                 break;
         }
-        /*result = tokenize(buffer);
-        printf("%s\n", result);*/
+
         bzero(buffer, MAXBUF);
         n = read(clientfd, buffer, 255);
         compare = strcmp("exit\n", buffer);
@@ -97,6 +204,11 @@ void * get_result(int clientfd) {
 
 
 int main(int argc, char **argv) {
+        
+    int i = 0;
+    for (i = 0; i < 20; i++) { 
+        accounts[i] = NULL;
+    }    
     
     struct sockaddr_in self;
     
@@ -125,6 +237,9 @@ int main(int argc, char **argv) {
         exit(errno);
     }
     
+    struct sigaction act;
+    act.sa_handler = intHandler;
+    sigaction(SIGINT, &act, NULL);
     int clientfd;
     int id = 0;
     tid = malloc(20 * sizeof(pthread_t));
@@ -147,10 +262,7 @@ int main(int argc, char **argv) {
         
     }
     
-    //Close all sockets and connections   
-    free(tid); 
     close(clientfd);
-    close(sockfd);
     
     return 0;
 }

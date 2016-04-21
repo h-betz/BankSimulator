@@ -11,6 +11,7 @@
 #include <sys/types.h>
 #include <time.h>
 #include "clientHandle.h"
+#include "bank.h"
 
 char * readAccountName(char *str, int i) {
     
@@ -111,36 +112,17 @@ int check(char *string) {
         //Command is credit
         free(result);
         return 4;
+    } else if (strcmp(result, "finish") == 0) {
+        free(result);
+        return 5;
+    } else if (strcmp(result, "balance") == 0) {
+        free(result);
+        return 6;
     }
     
     return 0;
 }
 
-
-/*
-char * checkCommand(char *token, char *str, int i) {
-
-    if (strcmp(token, "open") == 0) {
-        //Command is open
-        char *acct_name = readAccountName(str, i);
-        return acct_name;
-    } else if (strcmp(token, "start") == 0) {
-        //Command is start
-        char *acct_name = readAccountName(str, i);        
-        return acct_name;
-    } else if (strcmp(token, "debit") == 0) {
-        //Command is debit
-        char *debit = readCreditDebit(str, i);
-        //printf("here %s\n", debit);        
-        return debit;
-    } else if (strcmp(token, "credit") == 0) {
-        //Command is credit
-        char *credit = readCreditDebit(str, i);
-        return credit;
-    }
-
-    return 0;
-}*/
 
 //Parses user input to read commands
 char * tokenize(char *str) {
@@ -160,9 +142,6 @@ char * tokenize(char *str) {
         }
         //If next character is a space, marks end of command (eg. debit, open, credit)
         if (c == ' ') {
-            //char *result = checkCommand(token, str, ++i);
-            //free(token);
-            //return result;
             return token;
             //switch case to handle command
         } else if (c == '\0') {

@@ -9,4 +9,6 @@ typedef struct Acount_ {
 
 } Account;
 
+Account * createAccount(char *name);
+
 #endif
