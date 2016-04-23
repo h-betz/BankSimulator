@@ -24,7 +24,7 @@ Account * createAccount(char *acct_name) {
     bzero(acct->name, 100);
     strcpy(acct->name, acct_name);
     acct->balance = 0;
-    acct->in_session = 1;
+    acct->in_session = 0;
     return acct;
     
 }

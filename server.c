@@ -19,6 +19,7 @@
 
 //Global variables for threads, accounts, and server control
 pthread_t *tid;
+pthread_mutex_t mutex;
 Account *accounts[20];
 int terminate = 0;
 int sockfd;
@@ -84,7 +85,6 @@ void bernieSanders() {
 void addAccount(Account *acct) {
     
     int i = 0;
-    
     //Loops through our list of accounts to see if there is an opening or if 
     //an account with the same name already exists
     for (i = 0; i < 20; i++) {
@@ -107,6 +107,11 @@ Account * getAccount(char *name) {
     for (i = 0; i < 20; i++) {
         //Check if this is our account
         if (strcmp(accounts[i]->name, name) == 0) {
+            //Account is in session
+            if (accounts[i]->in_session != 0) {
+                printf("Account is in session.\n");
+                return NULL;
+            }
             return accounts[i];
         }
     }
@@ -175,16 +180,19 @@ void * get_result(int clientfd) {
                 acct = createAccount(result);
                 free(result);
                 if (acct != NULL) {
-                    printf("Created account! %s\n", acct->name);
+                    pthread_mutex_lock(&mutex); 
                     addAccount(acct);
+                    pthread_mutex_unlock(&mutex);
                 }       
                 break;
             case 2:
                 result = readAccountName(buffer, strlen("start "));
                 acct = getAccount(result);
-                printf("Obtained account: %s\n", acct->name);
+                if (acct != NULL) {
+                    acct->in_session = 1;
+                    customerSession(acct, clientfd);
+                }
                 free(result);
-                customerSession(acct, clientfd);
                 break;
             default:
                 printf("Error! Improper command!\n");
@@ -245,6 +253,7 @@ int main(int argc, char **argv) {
     tid = malloc(20 * sizeof(pthread_t));
     pthread_t *timeThread;                                                      //our thread that will control how long our server is online
     pthread_t *control;                                                         //our thread that will handle requests from server manager
+    pthread_mutex_init(&mutex, NULL);
     
     //Start the server
     while (!terminate) {
