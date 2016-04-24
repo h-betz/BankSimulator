@@ -13,6 +13,8 @@
 #include "clientHandle.h"
 #include "bank.h"
 
+
+
 char * readAccountName(char *str, int i) {
     
     char *acct_name = (char *)malloc(strlen(str) + 1);
@@ -36,6 +38,7 @@ char * readAccountName(char *str, int i) {
     return 0;
 }
 
+//Gets the amount to credit or debit to an account and returns it as a floating point value
 float readCreditDebit(char *str, int i) {
     
     char *amount = (char *) malloc(strlen(str) + 1);
@@ -93,6 +96,7 @@ float readCreditDebit(char *str, int i) {
     return 0;
 }
 
+//Checks what command was given to the server
 int check(char *string) {
     
     char *result = tokenize(string);
@@ -144,11 +148,13 @@ char * tokenize(char *str) {
         if (c == ' ') {
             return token;
             //switch case to handle command
-        } else if (c == '\0') {
+        } else if (c == '\0' || isspace(c)) {
             if (strcmp("balance", token)) {
                 //Command is balance
+                return token;
             } else if (strcmp("finish", token)) {
                 //Command is finish
+                return token;
             }
         } else {
             //Print error -- Not a viable command

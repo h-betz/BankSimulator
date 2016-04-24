@@ -9,4 +9,5 @@ float readCreditDebit(char *str, int i);
 
 int check(char *string);
 
+
 #endif

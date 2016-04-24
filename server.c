@@ -63,6 +63,20 @@ void serverControl() {
     
     while (1) {
         sleep(20);
+        pthread_mutex_lock(&mutex);
+        //Do some stuff
+        int i;
+        for (i = 0; i < 20; i++) {
+            Account *acct = accounts[i];
+            if (acct != NULL) {
+                if (acct->in_session) {
+                    printf("%s\n\tIN SERVICE\n\tBalance: %.2f\n", acct->name, acct->balance);
+                } else {
+                    printf("%s\n\tBalance: %.2f\n", acct->name, acct->balance);                    
+                }
+            }
+        }
+        pthread_mutex_unlock(&mutex);
     }
     
 }
@@ -82,34 +96,40 @@ void bernieSanders() {
 }
 
 //Adds the account with name acct to our list of accounts 
-void addAccount(Account *acct) {
+void addAccount(Account *acct, int clientfd) {
     
     int i = 0;
+    char *message;
     //Loops through our list of accounts to see if there is an opening or if 
     //an account with the same name already exists
     for (i = 0; i < 20; i++) {
         if (accounts[i] == NULL) {
             accounts[i] = acct;
+            message = "Successfully opened account!";
+            write(clientfd, message, strlen(message));
             return;
         }
         if (strcmp(accounts[i]->name, acct->name) == 0) {
-            printf("An account with this name already exists!\n");
+            message = "An account with this name already exists!";
+            write(clientfd, message, strlen(message));
             return;
         }
     }
     
 }
 
-Account * getAccount(char *name) {
+//Returns the account with name "name"
+Account * getAccount(char *name, int clientfd) {
     
     int i = 0;
+    char *message = "The account you are trying to access is already in a session.";
     
     for (i = 0; i < 20; i++) {
         //Check if this is our account
         if (strcmp(accounts[i]->name, name) == 0) {
             //Account is in session
             if (accounts[i]->in_session != 0) {
-                printf("Account is in session.\n");
+                write(clientfd, message, strlen(message));
                 return NULL;
             }
             return accounts[i];
@@ -129,25 +149,36 @@ void customerSession(Account *acct, int clientfd) {
     int flag = -1;                                  //Flag to store result of command
     float amount = 0;                               //Floating value to store value to debit, credit or balance
     int n = read(clientfd, buffer, 255);            //Read commands from client
+    int debt = -1;
+    char *message = (char *)malloc(255);
+    bzero(message, 255);
     
     compare = strcmp("finish\n", buffer);           //Customer ended this session
     
     while (compare != 0 && n != 0) {
-        printf("Customer session\n");
         flag = check(buffer);
         switch (flag) {
             case 3:
                 amount = readCreditDebit(buffer, strlen("debit "));
+                debt = debitAccount(amount, acct);
+                if (debt == 0) {
+                    write(clientfd, "Sorry, you tried to overdraw from your account.", MAXBUF);
+                }
                 break;
             case 4:
                 amount = readCreditDebit(buffer, strlen("credit "));
+                creditAccount(amount, acct);
                 break;
             case 5:
                 //finish account session
-                compare = 1;
-                break;
+                write(clientfd, "Ending account session.", MAXBUF);
+                free(message);
+                return;
             case 6:
                 //get balance
+                amount = getBalance(acct);
+                sprintf(message, "%.2f", amount);
+                write(clientfd, message, strlen(message));
                 break; 
         }
         
@@ -155,6 +186,8 @@ void customerSession(Account *acct, int clientfd) {
         n = read(clientfd, buffer, 255);
         
     }
+    
+    free(message);    
     
 }
 
@@ -181,21 +214,23 @@ void * get_result(int clientfd) {
                 free(result);
                 if (acct != NULL) {
                     pthread_mutex_lock(&mutex); 
-                    addAccount(acct);
+                    addAccount(acct, clientfd);
                     pthread_mutex_unlock(&mutex);
                 }       
                 break;
             case 2:
                 result = readAccountName(buffer, strlen("start "));
-                acct = getAccount(result);
+                acct = getAccount(result, clientfd);
                 if (acct != NULL) {
                     acct->in_session = 1;
+                    write(clientfd, "Starting account session.", 255);
                     customerSession(acct, clientfd);
+                    acct->in_session = 0;
                 }
                 free(result);
                 break;
             default:
-                printf("Error! Improper command!\n");
+                write(clientfd, "Please enter an accepted command.", MAXBUF);
                 break;
         }
 
@@ -206,7 +241,7 @@ void * get_result(int clientfd) {
     }
     
     //Close socket with client and display status update
-    printf("Connection with %d terminated.\n", clientfd);
+    write(clientfd, "Connection with server terminated.", MAXBUF);
     close(clientfd);
 }
 
@@ -254,12 +289,12 @@ int main(int argc, char **argv) {
     pthread_t *timeThread;                                                      //our thread that will control how long our server is online
     pthread_t *control;                                                         //our thread that will handle requests from server manager
     pthread_mutex_init(&mutex, NULL);
+    pthread_create(&control, NULL, serverControl, NULL);
+    pthread_create(&timeThread, NULL, timer, NULL); 
     
     //Start the server
     while (!terminate) {
-        
-        pthread_create(&control, NULL, serverControl, NULL);
-        pthread_create(&timeThread, NULL, timer, NULL);        
+               
         struct sockaddr_in client_addr;
         int addrlen = sizeof(client_addr);
         printf("Listening...\n");

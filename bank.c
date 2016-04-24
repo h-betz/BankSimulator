@@ -28,3 +28,27 @@ Account * createAccount(char *acct_name) {
     return acct;
     
 }
+
+
+void creditAccount(float amount, Account *acct) {
+    
+    acct->balance += amount;
+    
+}
+
+int debitAccount(float amount, Account *acct) {
+    
+    if (amount > acct->balance) {
+        return 0;
+    } else {
+        acct->balance -= amount;
+        return 1;
+    }
+    
+}
+
+float getBalance(Account *acct) {
+    
+    return acct->balance;
+    
+}
