@@ -143,6 +143,7 @@ Account * getAccount(char *name, int clientfd) {
 //Handles a customer session
 void customerSession(Account *acct, int clientfd) {
     
+    write(clientfd, "Starting account session.", 255);    
     int compare = -1;                               //compare integer to check when user says finish
     char buffer[MAXBUF];                            //char array to store user command
     bzero(buffer, MAXBUF);                          //Zero out char array
@@ -163,11 +164,16 @@ void customerSession(Account *acct, int clientfd) {
                 debt = debitAccount(amount, acct);
                 if (debt == 0) {
                     write(clientfd, "Sorry, you tried to overdraw from your account.", MAXBUF);
+                } else {
+                    sprintf(message, "Withdrew: %.2f", amount);
+                    write(clientfd, message, strlen(message));
                 }
                 break;
             case 4:
                 amount = readCreditDebit(buffer, strlen("credit "));
                 creditAccount(amount, acct);
+                sprintf(message, "Credit of %.2f was successful.", amount);
+                write(clientfd, message, strlen(message));
                 break;
             case 5:
                 //finish account session
@@ -223,7 +229,6 @@ void * get_result(int clientfd) {
                 acct = getAccount(result, clientfd);
                 if (acct != NULL) {
                     acct->in_session = 1;
-                    write(clientfd, "Starting account session.", 255);
                     customerSession(acct, clientfd);
                     acct->in_session = 0;
                 }
