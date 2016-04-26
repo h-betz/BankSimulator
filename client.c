@@ -7,12 +7,13 @@
 #include <resolv.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
+#include <netdb.h>
 #include <sys/socket.h>
 #include <sys/types.h>
 #include <time.h>
 
 #define MAXBUF 256
-#define PORT_FTP 8888
+//#define PORT_FTP 8888
 #define SERVER_ADDR "127.0.0.1"
 
 
@@ -64,27 +65,23 @@ void * handleCommand(int sockfd) {
 
 int main (int argc, char **argv) {
     
-    int sockfd = 0;
-    struct sockaddr_in dest;
+    struct addrinfo ai;
+    struct addrinfo *dest;
     
+    ai.ai_flags = 0;
+	ai.ai_family = AF_INET;
+	ai.ai_socktype = SOCK_STREAM;
+	ai.ai_protocol = 0;
+    ai.ai_addrlen = 0;
+    ai.ai_addr = NULL;
+    ai.ai_canonname = NULL;
+    ai.ai_next = NULL;
+    bzero(&dest, sizeof(dest));
     
-    /*Open socket for streaming*/
+    int sockfd;
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     
-    if (sockfd < 0) {
-        perror("Socket");
-        exit(errno);
-    }
-    
-    /*Initialize server address/port struct*/
-    bzero(&dest, sizeof(dest));
-    dest.sin_family = AF_INET;
-    dest.sin_port = htons(PORT_FTP);
-    
-    if (inet_aton(SERVER_ADDR, &dest.sin_addr.s_addr) == 0) {
-        perror(SERVER_ADDR);
-        exit(errno);
-    }
+    int ai_flag = getaddrinfo(argv[1], argv[2], &ai, &dest);
     
     /*Connect to Server*/
     int con = connect(sockfd, (struct sockaddr*)&dest, sizeof(dest));
@@ -92,9 +89,9 @@ int main (int argc, char **argv) {
     /*If first connection attempt failed, wait 3 seconds and try again*/
     while (con != 0) {
         sleep(3);
-        con = connect(sockfd, (struct sockaddr*)&dest, sizeof(dest));
+        con = connect(sockfd, dest->ai_addr, dest->ai_addrlen);
     }
-
+    //freeaddrinfo(dest);
     printf("Successfully connected to server! Accepting commands now.\n");
     
     /*Create threads to handle user input and server response*/
@@ -105,8 +102,6 @@ int main (int argc, char **argv) {
     
     
     //Wait for threads to finish
-    //pthread_join(commandInput, NULL);
-    //pthread_cancel(output);  
     pthread_join(output, NULL);
     pthread_cancel(output);
     
