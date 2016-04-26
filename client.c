@@ -13,9 +13,6 @@
 #include <time.h>
 
 #define MAXBUF 256
-//#define PORT_FTP 8888
-#define SERVER_ADDR "127.0.0.1"
-
 
 void * handleServer(int sockfd) {
     
@@ -38,6 +35,7 @@ void * handleServer(int sockfd) {
     
 }
 
+//Handles the commands entered by the user
 void * handleCommand(int sockfd) {
     
     printf("Enter a command: ");         
@@ -47,14 +45,23 @@ void * handleCommand(int sockfd) {
     
     //Get user input and send it to server
     while (1) {
-        bzero(buffer, MAXBUF);   
-        if (fgets(buffer, MAXBUF, stdin) == NULL) break;
-        comp = strcmp("exit\n", buffer);
-        length = strlen(buffer);
-        send(sockfd, buffer, length, 0); 
+        
+        bzero(buffer, MAXBUF);                                      //zero out our char array that stores user input 
+        if (fgets(buffer, MAXBUF, stdin) == NULL) {                 //get user input, if user enters nothing, do nothing
+        } else {      
+            if (strcmp(buffer, "")) {
+            } else {                                             
+                comp = strcmp("exit\n", buffer);                        //checks to see if the user wants to exit
+                length = strlen(buffer);
+                send(sockfd, buffer, length, 0);                        //otherwise send user command to server
+            }
+        }
+        
+        //If user wants to exit, break from the loop
         if (comp == 0) {
             break;
         }
+        
         printf("Processing command...\n");        
         sleep(2);                                               //slows down process to simulate a server handling thousands of requests
         printf("Enter a command: ");     
@@ -63,8 +70,16 @@ void * handleCommand(int sockfd) {
     
 }
 
+//Does the leg work of connecting to the server found at the provided host name and port number
 int main (int argc, char **argv) {
     
+    //Checks to see if user entered valid arguments
+    if (argc != 3) {
+        printf("Please enter a valid host name and port number.\n");
+        return 0;
+    }
+    
+    //Structs needed to connect the client to the server
     struct addrinfo ai;
     struct addrinfo *dest;
     
@@ -78,6 +93,7 @@ int main (int argc, char **argv) {
     ai.ai_next = NULL;
     bzero(&dest, sizeof(dest));
     
+    //Socket identifier
     int sockfd;
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     
@@ -87,9 +103,12 @@ int main (int argc, char **argv) {
     int con = connect(sockfd, (struct sockaddr*)&dest, sizeof(dest));
     
     /*If first connection attempt failed, wait 3 seconds and try again*/
+    printf("Connecting to server...\n");
+    con = connect(sockfd, dest->ai_addr, dest->ai_addrlen);        
+    
     while (con != 0) {
+        con = connect(sockfd, dest->ai_addr, dest->ai_addrlen);        
         sleep(3);
-        con = connect(sockfd, dest->ai_addr, dest->ai_addrlen);
     }
     //freeaddrinfo(dest);
     printf("Successfully connected to server! Accepting commands now.\n");

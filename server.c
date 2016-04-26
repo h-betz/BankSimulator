@@ -14,11 +14,10 @@
 #include "bank.h"
 #include "clientHandle.h"
 
-#define PORT 8888
+#define PORT 8311
 #define MAXBUF 256
 
 //Global variables for threads, accounts, and server control
-pthread_t *tid;
 pthread_mutex_t mutex;
 Account *accounts[20];
 int terminate = 0;
@@ -29,11 +28,9 @@ void intHandler(int sig) {
     
     terminate = 1;
     bernieSanders();
-    terminateThreads();
-    free(tid);
     close(sockfd);
-    printf("Terminated\n");
-    exit(errno);
+    printf("\nTerminated\n");
+    //exit(errno);
 }
 
 
@@ -42,19 +39,6 @@ void * timer() {
     
     sleep(5000);
     terminate = 1;
-    terminateThreads();
-    
-}
-
-//Ends all connections and threads in our server
-void terminateThreads() {
-    
-    int i = 0;
-    for (i = 0; i < 20; i++) {
-        if (tid[i] != NULL) {
-            pthread_cancel(tid[i]);
-        }
-    }
     
 }
 
@@ -66,6 +50,7 @@ void serverControl() {
         pthread_mutex_lock(&mutex);
         //Do some stuff
         int i;
+        printf("\n*******************************************************\nAUTOMATIC SERVER BACKUP\n\n");
         for (i = 0; i < 20; i++) {
             Account *acct = accounts[i];
             if (acct != NULL) {
@@ -77,6 +62,7 @@ void serverControl() {
             }
         }
         pthread_mutex_unlock(&mutex);
+        printf("\n*******************************************************\n");
     }
     
 }
@@ -86,11 +72,12 @@ void bernieSanders() {
     
     int i = 0;
     Account *acct = accounts[i];
-    while (acct != NULL) {
-        printf("Breaking up the big banks!\n");
-        free(acct);
-        ++i;
-        acct = accounts[i];
+
+    for (i = 0; i < 20; i++) {
+        if (accounts[i] != NULL) {
+            acct = accounts[i];
+            free(acct);
+        }
     }
     
 }
@@ -116,6 +103,8 @@ void addAccount(Account *acct, int clientfd) {
         }
     }
     
+    write(clientfd, "Sorry, no new accounts can be opened at this time.", MAXBUF);
+    
 }
 
 //Returns the account with name "name"
@@ -126,7 +115,7 @@ Account * getAccount(char *name, int clientfd) {
     
     for (i = 0; i < 20; i++) {
         //Check if this is our account
-        if (strcmp(accounts[i]->name, name) == 0) {
+        if (accounts[i] != NULL && strcmp(accounts[i]->name, name) == 0) {
             //Account is in session
             if (accounts[i]->in_session != 0) {
                 write(clientfd, message, strlen(message));
@@ -135,7 +124,7 @@ Account * getAccount(char *name, int clientfd) {
             return accounts[i];
         }
     }
-    
+    write(clientfd, "I'm sorry, but that account doesn't exist.", MAXBUF);
     return NULL;
     
 }
@@ -161,19 +150,27 @@ void customerSession(Account *acct, int clientfd) {
         switch (flag) {
             case 3:
                 amount = readCreditDebit(buffer, strlen("debit "));
-                debt = debitAccount(amount, acct);
-                if (debt == 0) {
-                    write(clientfd, "Sorry, you tried to overdraw from your account.", MAXBUF);
+                if (amount == -1) {
+                    write(clientfd, "Please enter a correct value.", MAXBUF);
                 } else {
-                    sprintf(message, "Withdrew: %.2f", amount);
-                    write(clientfd, message, strlen(message));
+                    debt = debitAccount(amount, acct);
+                    if (debt == 0) {
+                        write(clientfd, "Sorry, you tried to overdraw from your account.", MAXBUF);
+                    } else {
+                        sprintf(message, "Withdrew: %.2f", amount);
+                        write(clientfd, message, strlen(message));
+                    }
                 }
                 break;
             case 4:
                 amount = readCreditDebit(buffer, strlen("credit "));
-                creditAccount(amount, acct);
-                sprintf(message, "Credit of %.2f was successful.", amount);
-                write(clientfd, message, strlen(message));
+                if (amount == -1) {
+                    write(clientfd, "Please enter a correct value.", MAXBUF);
+                } else {
+                    creditAccount(amount, acct);
+                    sprintf(message, "Credit of %.2f was successful.", amount);
+                    write(clientfd, message, strlen(message));
+                }
                 break;
             case 5:
                 //finish account session
@@ -183,9 +180,12 @@ void customerSession(Account *acct, int clientfd) {
             case 6:
                 //get balance
                 amount = getBalance(acct);
-                sprintf(message, "%.2f", amount);
+                sprintf(message, "Account Balance: %.2f", amount);
                 write(clientfd, message, strlen(message));
-                break; 
+                break;
+            default:
+                write(clientfd, "Sorry, that is not an accepted command.", MAXBUF);
+                break;
         }
         
         bzero(buffer, MAXBUF);
@@ -290,7 +290,8 @@ int main(int argc, char **argv) {
     sigaction(SIGINT, &act, NULL);
     int clientfd;
     int id = 0;
-    tid = malloc(20 * sizeof(pthread_t));
+
+    pthread_t *cli;
     pthread_t *timeThread;                                                      //our thread that will control how long our server is online
     pthread_t *control;                                                         //our thread that will handle requests from server manager
     pthread_mutex_init(&mutex, NULL);
@@ -306,11 +307,13 @@ int main(int argc, char **argv) {
         
         /*accept a connection and spawn a new thread*/
         clientfd = accept(sockfd, (struct sockaddr*)&client_addr, &addrlen);
-		printf("%s:%d connected\n", inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port));        
-        pthread_create(&tid[id], NULL, get_result, clientfd);
+        if (clientfd >= 0) {
+		  printf("%s:%d connected\n", inet_ntoa(client_addr.sin_addr), ntohs(client_addr.sin_port));
+          pthread_create(&cli, NULL, get_result, clientfd);              
+        }
         
     }
-    
+
     close(clientfd);
     
     return 0;
