@@ -49,7 +49,7 @@ void * handleCommand(int sockfd) {
         bzero(buffer, MAXBUF);                                      //zero out our char array that stores user input 
         if (fgets(buffer, MAXBUF, stdin) == NULL) {                 //get user input, if user enters nothing, do nothing
         } else {      
-            if (strcmp(buffer, "")) {
+            if (strcmp(buffer, "") == 0) {
             } else {                                             
                 comp = strcmp("exit\n", buffer);                        //checks to see if the user wants to exit
                 length = strlen(buffer);
@@ -79,7 +79,6 @@ int main (int argc, char **argv) {
         return 0;
     }
     
-    //Structs needed to connect the client to the server
     struct addrinfo ai;
     struct addrinfo *dest;
     
@@ -107,12 +106,11 @@ int main (int argc, char **argv) {
     con = connect(sockfd, dest->ai_addr, dest->ai_addrlen);        
     
     while (con != 0) {
-        con = connect(sockfd, dest->ai_addr, dest->ai_addrlen);        
+        con = connect(sockfd, dest->ai_addr, dest->ai_addrlen);
+        if (con != 0) break;        
         sleep(3);
     }
-    //freeaddrinfo(dest);
-    printf("Successfully connected to server! Accepting commands now.\n");
-    
+    printf("Success!\n");
     /*Create threads to handle user input and server response*/
     pthread_t commandInput;
     pthread_t output;
@@ -121,8 +119,8 @@ int main (int argc, char **argv) {
     
     
     //Wait for threads to finish
-    pthread_join(output, NULL);
-    pthread_cancel(output);
+    pthread_join(commandInput, NULL);
+    pthread_cancel(output); 
     
     close(sockfd);
     

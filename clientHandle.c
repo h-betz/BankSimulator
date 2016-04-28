@@ -93,7 +93,7 @@ float readCreditDebit(char *str, int i) {
         }
     }
     
-    return 0;
+    return -1;
 }
 
 //Checks what command was given to the server

@@ -303,7 +303,7 @@ int main(int argc, char **argv) {
                
         struct sockaddr_in client_addr;
         int addrlen = sizeof(client_addr);
-        printf("Listening...\n");
+        printf("Listening...\n", self.sin_addr.s_addr);
         
         /*accept a connection and spawn a new thread*/
         clientfd = accept(sockfd, (struct sockaddr*)&client_addr, &addrlen);
