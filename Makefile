@@ -1,4 +1,4 @@
-all: server.c client.c libserv.a
+all: server.c client.c
 	gcc -c bank.c
 	gcc -c clientHandle.c
 	gcc -w -o server server.c -lpthread clientHandle.o bank.o

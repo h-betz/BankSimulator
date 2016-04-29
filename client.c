@@ -73,43 +73,53 @@ void * handleCommand(int sockfd) {
 //Does the leg work of connecting to the server found at the provided host name and port number
 int main (int argc, char **argv) {
     
+    char buffer[MAXBUF];
     //Checks to see if user entered valid arguments
     if (argc != 3) {
         printf("Please enter a valid host name and port number.\n");
         return 0;
     }
     
-    struct addrinfo ai;
-    struct addrinfo *dest;
+    int sockfd = 0;
+    struct sockaddr_in dest;
+    struct hostent *he;
+    struct in_addr **addr_list;
     
-    ai.ai_flags = 0;
-	ai.ai_family = AF_INET;
-	ai.ai_socktype = SOCK_STREAM;
-	ai.ai_protocol = 0;
-    ai.ai_addrlen = 0;
-    ai.ai_addr = NULL;
-    ai.ai_canonname = NULL;
-    ai.ai_next = NULL;
-    bzero(&dest, sizeof(dest));
-    
-    //Socket identifier
-    int sockfd;
+    /*Open socket for streaming*/
     sockfd = socket(AF_INET, SOCK_STREAM, 0);
     
-    int ai_flag = getaddrinfo(argv[1], argv[2], &ai, &dest);
+    if (sockfd < 0) {
+        perror("Socket");
+        exit(errno);
+    }
+    
+    if ( (he = gethostbyname(argv[1]) ) == NULL ) {
+        exit(1); /* error */
+    }
+    
+    if (he == NULL) {
+        exit(1);
+    }
+    
+    /*Initialize server address/port struct*/
+    bzero(&dest, sizeof(dest));
+    dest.sin_family = AF_INET;
+    int p = atoi(argv[2]);
+    dest.sin_port = htons(p);
+    addr_list = (struct in_addr **) he->h_addr_list;
+    const char *cp = inet_ntoa(*addr_list[0]);
+    dest.sin_addr.s_addr = inet_addr(cp);
     
     /*Connect to Server*/
+    printf("Connecting to server...\n");
     int con = connect(sockfd, (struct sockaddr*)&dest, sizeof(dest));
     
     /*If first connection attempt failed, wait 3 seconds and try again*/
-    printf("Connecting to server...\n");
-    con = connect(sockfd, dest->ai_addr, dest->ai_addrlen);        
-    
     while (con != 0) {
-        con = connect(sockfd, dest->ai_addr, dest->ai_addrlen);
-        if (con != 0) break;        
         sleep(3);
+        con = connect(sockfd, (struct sockaddr*)&dest, sizeof(dest));
     }
+    
     printf("Success!\n");
     /*Create threads to handle user input and server response*/
     pthread_t commandInput;
@@ -119,8 +129,8 @@ int main (int argc, char **argv) {
     
     
     //Wait for threads to finish
-    pthread_join(commandInput, NULL);
-    pthread_cancel(output); 
+    pthread_join(output, NULL);
+    pthread_cancel(commandInput); 
     
     close(sockfd);
     
