@@ -14,20 +14,22 @@
 
 #define MAXBUF 256
 
+//Handles messages sent from the server
 void * handleServer(int sockfd) {
     
-    char buffer[MAXBUF];
-    bzero(buffer, 255);
+    char buffer[MAXBUF];                            //string to store message from server
+    bzero(buffer, 255);                             //zeros out the string
     int n = 0;
     
+    //Keep checking messages from server until connection is ended
     while (1) {
         
-        n = recv(sockfd, buffer, MAXBUF, NULL);
-        if (n == 0) {
+        n = recv(sockfd, buffer, MAXBUF, NULL);     //receives message from server
+        if (n == 0) {                               //break out of loop if server ended connection
             break;
         }
-        printf("%s\n", buffer);
-        bzero(buffer, 255);
+        printf("%s\n", buffer);                     //print the message
+        bzero(buffer, 255);                         //zero out the string again
         
     }
     
@@ -39,8 +41,8 @@ void * handleServer(int sockfd) {
 void * handleCommand(int sockfd) {
     
     printf("Enter a command: ");         
-    char buffer[MAXBUF];
-    int comp = -1;
+    char buffer[MAXBUF];                                            //stores the message from the client
+    int comp = -1;                                                  //compare value
     int length = 0;
     
     //Get user input and send it to server
@@ -64,7 +66,7 @@ void * handleCommand(int sockfd) {
         
         printf("Processing command...\n");        
         sleep(2);                                               //slows down process to simulate a server handling thousands of requests
-        printf("Enter a command: ");     
+        printf("Enter a command: ");                            //Ask for another command
         
     }
     
@@ -120,7 +122,7 @@ int main (int argc, char **argv) {
         con = connect(sockfd, (struct sockaddr*)&dest, sizeof(dest));
     }
     
-    printf("Success!\n");
+    printf("Successfully connected to server!\n");
     /*Create threads to handle user input and server response*/
     pthread_t commandInput;
     pthread_t output;

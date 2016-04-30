@@ -13,6 +13,7 @@
 #include "clientHandle.h"
 #include "bank.h"
 
+//Creates an account with name acct_name and returns the account struct
 Account * createAccount(char *acct_name) {
     
     Account *acct = malloc(sizeof(Account));
@@ -29,13 +30,14 @@ Account * createAccount(char *acct_name) {
     
 }
 
-
+//Add the amount to the specified account
 void creditAccount(float amount, Account *acct) {
     
     acct->balance += amount;
     
 }
 
+//Debit the account. Return zero if an overdraw is attempted
 int debitAccount(float amount, Account *acct) {
     
     if (amount > acct->balance) {
@@ -47,6 +49,7 @@ int debitAccount(float amount, Account *acct) {
     
 }
 
+//Return the account balance
 float getBalance(Account *acct) {
     
     return acct->balance;

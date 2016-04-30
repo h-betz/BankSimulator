@@ -14,20 +14,23 @@
 #include "bank.h"
 
 
-
+//Tokenize the account name from the string
 char * readAccountName(char *str, int i) {
     
     char *acct_name = (char *)malloc(strlen(str) + 1);
     bzero(acct_name, strlen(str) + 1);
     int ind = 0;
     char c = str[i];
+    
+    //Make sure the account starts with and only contains alphanumeric characters
     if (isalnum(c)) {
         while (isalnum(c)) {
             acct_name[ind] = c;
             ind++;
             c = str[++i];
         }
-
+        
+        //If we hit a space character, null terminate the account name string and return the account
         if (isspace(c)) {
             acct_name[ind] = '\0';
             return acct_name;
@@ -46,14 +49,17 @@ float readCreditDebit(char *str, int i) {
     int ind = 0;
     char c = str[i];
     
+    //Only accept values that start with a digit or a .
     if (isdigit(c)) {
         
+        //Read digits from string and append it to our amount string
         while (isdigit(c)) {
             amount[ind] = c;
             ind++;
             c = str[++i];
         }
         
+        //Check if character is a decimal, if so continue reading the string
         if (c == '.') {
             amount[ind] = c;
             ind++;
@@ -63,8 +69,10 @@ float readCreditDebit(char *str, int i) {
                 ind++;
                 c = str[++i];
             }
+            
+            //Check if the next character is a space or null character
             if (c == '\0' || isspace(c)) {
-                float f = atof(amount);
+                float f = atof(amount);             //convert string to float
                 free(amount);
                 return f;
             } else {
@@ -74,7 +82,7 @@ float readCreditDebit(char *str, int i) {
             return 0;
         }
         
-    } else if (c == '.') {
+    } else if (c == '.') {                          //otherwise read our string as a decimal float 
         amount[ind] = c;
         ind++;
         c = str[++i];

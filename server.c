@@ -30,7 +30,7 @@ void intHandler(int sig) {
     bernieSanders();
     close(sockfd);
     printf("\nTerminated\n");
-    //exit(errno);
+
 }
 
 
@@ -46,11 +46,12 @@ void * timer() {
 void serverControl() {
     
     while (1) {
-        sleep(20);
-        pthread_mutex_lock(&mutex);
-        //Do some stuff
+        sleep(20);                                              //wait 20 seconds before backing up
+        pthread_mutex_lock(&mutex);                             //locks the mutex so no accounts can be added
         int i;
         printf("\n*******************************************************\nAUTOMATIC SERVER BACKUP\n\n");
+        
+        //Go through all of the existing accounts and print them out
         for (i = 0; i < 20; i++) {
             Account *acct = accounts[i];
             if (acct != NULL) {
@@ -61,13 +62,14 @@ void serverControl() {
                 }
             }
         }
-        pthread_mutex_unlock(&mutex);
+        
         printf("\n*******************************************************\n");
+        pthread_mutex_unlock(&mutex);                           //unlock the mutex so accounts can be added
     }
     
 }
 
-//Closes all accounts in our bank
+//Breaks up all accounts in our bank
 void bernieSanders() {
     
     int i = 0;
@@ -118,13 +120,13 @@ Account * getAccount(char *name, int clientfd) {
         if (accounts[i] != NULL && strcmp(accounts[i]->name, name) == 0) {
             //Account is in session
             if (accounts[i]->in_session != 0) {
-                write(clientfd, message, strlen(message));
+                write(clientfd, message, strlen(message));                          //send message to client
                 return NULL;
             }
             return accounts[i];
         }
     }
-    write(clientfd, "I'm sorry, but that account doesn't exist.", MAXBUF);
+    write(clientfd, "I'm sorry, but that account doesn't exist.", MAXBUF);          //send message to client
     return NULL;
     
 }
@@ -146,30 +148,30 @@ void customerSession(Account *acct, int clientfd) {
     compare = strcmp("finish\n", buffer);           //Customer ended this session
     
     while (compare != 0 && n != 0) {
-        flag = check(buffer);
+        flag = check(buffer);                       //check what kind of command we received, and perform the necessary action
         switch (flag) {
-            case 3:
-                amount = readCreditDebit(buffer, strlen("debit "));
-                if (amount == -1) {
+            case 3:                                                             //client wants to debit
+                amount = readCreditDebit(buffer, strlen("debit "));             //get the amount the client wants to debit
+                if (amount == -1) {                                             //amount isn't an accepted value
                     write(clientfd, "Please enter a correct value.", MAXBUF);
                 } else {
-                    debt = debitAccount(amount, acct);
+                    debt = debitAccount(amount, acct);                          //otherwise deduct amount from account
                     if (debt == 0) {
-                        write(clientfd, "Sorry, you tried to overdraw from your account.", MAXBUF);
+                        write(clientfd, "Sorry, you tried to overdraw from your account.", MAXBUF);     //prevent client from overdrawing
                     } else {
                         sprintf(message, "Withdrew: %.2f", amount);
-                        write(clientfd, message, strlen(message));
+                        write(clientfd, message, strlen(message));              //send message to client
                     }
                 }
                 break;
-            case 4:
-                amount = readCreditDebit(buffer, strlen("credit "));
+            case 4:                                                             //client wants to credit account
+                amount = readCreditDebit(buffer, strlen("credit "));            //get the amount the client wants to credit
                 if (amount == -1) {
-                    write(clientfd, "Please enter a correct value.", MAXBUF);
+                    write(clientfd, "Please enter a correct value.", MAXBUF);   //client didn't enter an accepted value
                 } else {
-                    creditAccount(amount, acct);
-                    sprintf(message, "Credit of %.2f was successful.", amount);
-                    write(clientfd, message, strlen(message));
+                    creditAccount(amount, acct);                                //credit the account with amount specified
+                    sprintf(message, "Credit of %.2f was successful.", amount); 
+                    write(clientfd, message, strlen(message));                  //send message to client
                 }
                 break;
             case 5:
@@ -184,12 +186,13 @@ void customerSession(Account *acct, int clientfd) {
                 write(clientfd, message, strlen(message));
                 break;
             default:
+                //otherwise the client didnt enter an accepted command
                 write(clientfd, "Sorry, that is not an accepted command.", MAXBUF);
                 break;
         }
         
-        bzero(buffer, MAXBUF);
-        n = read(clientfd, buffer, 255);
+        bzero(buffer, MAXBUF);                      //clear out the command string
+        n = read(clientfd, buffer, 255);            //get the clients next command
         
     }
     
@@ -214,38 +217,50 @@ void * get_result(int clientfd) {
     while (compare != 0 && n != 0) {
         flag = check(buffer);
         switch (flag) {
+            //Case 1, user wants to open an account
             case 1:
-                result = readAccountName(buffer, strlen("open "));
-                acct = createAccount(result);
+                result = readAccountName(buffer, strlen("open "));      //get the account name
+                if (result == NULL) {
+                    write(clientfd, "Please enter a valid account name.", MAXBUF);
+                    break;
+                }
+                acct = createAccount(result);                           //create the account
                 free(result);
                 if (acct != NULL) {
-                    pthread_mutex_lock(&mutex); 
-                    addAccount(acct, clientfd);
-                    pthread_mutex_unlock(&mutex);
+                    pthread_mutex_lock(&mutex);                         //prevent other accounts from being added as we add a new account
+                    addAccount(acct, clientfd);                         //add the account to our bank
+                    pthread_mutex_unlock(&mutex);                       //unlock the mutex so other accounts can be added
                 }       
                 break;
+            //Case 2, user wants to start account
             case 2:
-                result = readAccountName(buffer, strlen("start "));
-                acct = getAccount(result, clientfd);
+                result = readAccountName(buffer, strlen("start "));     //get name of the account
+                if (result == NULL) {
+                    write(clientfd, "Please enter a valid account name.", MAXBUF);
+                    break;
+                }
+                acct = getAccount(result, clientfd);                    //get the account
                 if (acct != NULL) {
-                    acct->in_session = 1;
-                    customerSession(acct, clientfd);
-                    acct->in_session = 0;
+                    acct->in_session = 1;                               //mark the account as being in a session
+                    customerSession(acct, clientfd);                    //handle the customer session for this account
+                    acct->in_session = 0;                               //after being done, set the account as not being in session
                 }
                 free(result);
                 break;
             default:
+                //Otherwise the command is not accepted
                 write(clientfd, "Please enter an accepted command.", MAXBUF);
                 break;
         }
 
-        bzero(buffer, MAXBUF);
-        n = read(clientfd, buffer, 255);
-        compare = strcmp("exit\n", buffer);
+        bzero(buffer, MAXBUF);                      //zero out the command string
+        n = read(clientfd, buffer, 255);            //get clients next command
+        compare = strcmp("exit\n", buffer);         //check to see if client wants to exit
 
     }
     
     //Close socket with client and display status update
+    printf("Connection with %d ended.\n", clientfd);
     write(clientfd, "Connection with server terminated.", MAXBUF);
     close(clientfd);
 }
@@ -291,6 +306,7 @@ int main(int argc, char **argv) {
     int clientfd;
     int id = 0;
 
+    //Create our threads to run and handle the server as well as client interactions
     pthread_t *cli;
     pthread_t *timeThread;                                                      //our thread that will control how long our server is online
     pthread_t *control;                                                         //our thread that will handle requests from server manager
