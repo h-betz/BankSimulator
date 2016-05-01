@@ -1,0 +1,44 @@
+Test1:
+	./client "localhost" "8311"
+	open account0
+	start account0
+	credit 50.98
+	debit 10.43
+	balance
+	finish
+	open account0
+	open account
+	start account
+	credit 75.32
+	debit 76.00
+	debit .32
+	debit 0.32
+	finish
+	exit
+
+Test2:
+	./client "localhost" "8311"	//Window 1
+	(Open another terminal window)
+	./client "localhost" "8311"	//Window 2
+	Window 2: open account0
+	Window 1: start account0
+	Window 2: start account0
+	Window 1: b@lance
+	Window 1: credit 20.00
+	Window 1: finish
+	Window 1: exit
+	Window 2: start account0
+	Window 2: balance
+	Window 2: finish
+	Window 2: exit
+
+Test3:
+	./client "cd.cs.rutgers.edu" "8311"
+	open 8971
+	start 8971
+	test
+	credit 20.00
+	debit 20.00
+	balance
+	finish
+	exit

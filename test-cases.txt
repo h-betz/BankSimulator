@@ -1,0 +1,201 @@
+Test1:
+	Inputs:
+		./client "localhost" "8311"
+		open account0
+		start account0
+		credit 50.98
+		debit 10.43
+		balance
+		finish
+		open account0
+		open account
+		start account
+		credit 75.32
+		debit 76.00
+		debit .32
+		debit 0.32
+		finish
+		exit
+
+	Output:
+		Connecting to server...
+		Successfully connected to server!
+		Enter a command: open account0
+		Processing command...
+		Successfully opened account!
+		Enter a command: start account0
+		Processing command...
+		Starting account session.
+		Enter a command: credit 50.98
+		Processing command...
+		Credit of 50.98 was successful.
+		Enter a command: debit 10.43
+		Processing command...
+		Withdrew: 10.43
+		Enter a command: balance
+		Processing command...
+		Account Balance: 40.55
+		Enter a command: finish
+		Processing command...
+		Ending account session.
+		Enter a command: open account0
+		Processing command...
+		An account with this name already exists!
+		Enter a command: open account
+		Processing command...
+		Successfully opened account!
+		Enter a command: start account
+		Processing command...
+		Starting account session.
+		Enter a command: credit 75.32
+		Processing command...
+		Credit of 75.32 was successful.
+		Enter a command: debit 76.00
+		Processing command...
+		Sorry, you tried to overdraw from your account.
+		Enter a command: debit .32
+		Processing command...
+		Please enter a correct value.
+		Enter a command: debit 0.32
+		Processing command...
+		Withdrew: 0.32
+		Enter a command: balance
+		Processing command...
+		Account Balance: 75.00
+		Enter a command: finish
+		Processing command...
+		Ending account session.
+		Enter a command: exit
+		Connection with server terminated.
+
+		Server ended connection
+
+Test2 (different server session):
+	Inputs:
+		./client "localhost" "8311"	//Window 1
+		(Open another terminal window)
+		./client "localhost" "8311"	//Window 2
+		Window 2: open account0
+		Window 1: start account0
+		Window 2: start account0
+		Window 1: b@lance
+		Window 1: credit 20.00
+		Window 1: finish
+		Window 1: exit
+		Window 2: start account0
+		Window 2: balance
+		Window 2: finish
+		Window 2: exit
+	Outputs (in order of above):
+		Connecting to server...
+		Successfully connected to server!
+		Enter a command:
+		Connecting to server...
+		Successfully connected to server!
+		Enter a command:
+		Processing command...
+		Successfully opened account!
+		Processing command...
+		Starting account session.
+		Processing command...
+		The account you are trying to access is already in a session.
+		Processing command...
+		Sorry, that is not an accepted command.
+		Processing command...
+		Credit of 20.00 was successful.
+		Processing command...
+		Ending account session.
+		Connection with server terminated.
+
+		Server ended connection
+		Processing command...
+		Starting account session.
+		Processing command...
+		Account Balance: 20.00
+		Processing command...
+		Ending account session.
+		Connection with server terminated.
+
+		Server ended connection
+
+	Server Ouput should look similar to this every 20 seconds:
+		*******************************************************
+		AUTOMATIC SERVER BACKUP
+
+		account0
+			Balance: 20.00
+
+		*******************************************************
+			OR DEPENDING ON IF AN ACCOUNT IS IN SESSION:
+		*******************************************************
+		AUTOMATIC SERVER BACKUP
+
+		account0
+			IN SERVICE
+			Balance: 20.00
+
+		*******************************************************
+Test3:
+	Inputs:
+		./client "cd.cs.rutgers.edu" "8311"
+		open 8971
+		start 8971
+		test
+		credit 20.00
+		debit 20.00
+		balance
+		finish
+		exit
+
+	Outputs (client side):
+		Connecting to server...
+		Successfully connected to server! 
+		Processing command...
+		Successfully opened account!
+		Processing command...
+		Starting account session.
+		Processing command...
+		Sorry, that is not an accepted command.
+		Processing command...
+		Credit of 20.00 was successful.
+		Processing command...
+		Withdrew: 20.00
+		Processing command...
+		Account Balance: 0.00
+		Processing command...
+		Ending account session.
+		Connection with server terminated.
+
+		Server ended connection
+	Outputs (server side -- Depends on how long you wait between commands):
+		Listening...
+		73.226.65.156:48477 connected
+		Listening...
+
+		*******************************************************
+		AUTOMATIC SERVER BACKUP
+
+
+		*******************************************************
+
+		*******************************************************
+		AUTOMATIC SERVER BACKUP
+
+		8971
+			Balance: 0.00
+
+		*******************************************************
+
+		*******************************************************
+		AUTOMATIC SERVER BACKUP
+
+		8971
+			IN SERVICE
+			Balance: 0.00
+
+		*******************************************************
+	
+
+		
+	
+

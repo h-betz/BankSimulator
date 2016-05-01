@@ -108,6 +108,9 @@ float readCreditDebit(char *str, int i) {
 int check(char *string) {
     
     char *result = tokenize(string);
+    if (result == NULL) {
+        return 0;
+    }
     if (strcmp(result, "open") == 0) {
         //Command is open
         free(result);
@@ -166,6 +169,7 @@ char * tokenize(char *str) {
             }
         } else {
             //Print error -- Not a viable command
+            return 0;
         }
         
     }
